@@ -180,7 +180,32 @@ describe Clamp::Command do
 
   end
 
+  shared_examples "subcommand examples" do 
+    it "accepts options defined in superclass (specified after the subcommand)" do
+      command.run(["move", "--direction", "north"])
+      stdout.should =~ /walking north/
+    end
+
+    it "accepts options defined in superclass (specified before the subcommand)" do
+      command.run(["--direction", "north", "move"])
+      stdout.should =~ /walking north/
+    end
+
+    it "accepts options defined in included modules" do
+      command.run(["move", "--speed", "very quickly"])
+      stdout.should =~ /walking home very quickly/
+    end
+
+    it "has access to command context" do
+      command = command_class.new("go", :motion => "wandering")
+      command.run(["move"])
+      stdout.should =~ /wandering home/
+    end
+  end
+
+
   describe "each subcommand" do
+    include_examples "subcommand examples"
 
     let(:command_class) do
 
@@ -211,25 +236,41 @@ describe Clamp::Command do
       command_class.new("go")
     end
 
-    it "accepts options defined in superclass (specified after the subcommand)" do
-      command.run(["move", "--direction", "north"])
-      stdout.should =~ /walking north/
+  end
+
+  describe "each subcommand as class" do
+    include_examples "subcommand examples"
+
+    let(:command_class) do
+
+      speed_options = Module.new do
+        extend Clamp::Option::Declaration
+        option "--speed", "SPEED", "how fast", :default => "slowly"
+      end
+
+      move_subcommand = Class.new(Clamp::Command) do
+
+        def execute
+          motion = context[:motion] || "walking"
+          puts "#{motion} #{direction} #{speed}"
+        end
+
+      end
+
+      Class.new(Clamp::Command) do
+
+        option "--direction", "DIR", "which way", :default => "home"
+
+        include speed_options
+
+        subcommand "move", "move in the appointed direction", move_subcommand
+
+      end
+
     end
 
-    it "accepts options defined in superclass (specified before the subcommand)" do
-      command.run(["--direction", "north", "move"])
-      stdout.should =~ /walking north/
-    end
-
-    it "accepts options defined in included modules" do
-      command.run(["move", "--speed", "very quickly"])
-      stdout.should =~ /walking home very quickly/
-    end
-
-    it "has access to command context" do
-      command = command_class.new("go", :motion => "wandering")
-      command.run(["move"])
-      stdout.should =~ /wandering home/
+    let(:command) do
+      command_class.new("go")
     end
 
   end
