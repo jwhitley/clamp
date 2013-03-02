@@ -4,11 +4,12 @@ module Clamp
 
   class Parameter < Attribute
 
-    def initialize(name, description, options = {})
+    def initialize(name, description, options = {}, &block)
       @name = name
       @description = description
       @multivalued = (@name =~ ELLIPSIS_SUFFIX)
       @required = (@name !~ OPTIONAL)
+      @block = block
       if options.has_key?(:attribute_name)
         @attribute_name = options[:attribute_name].to_s
       end
